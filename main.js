@@ -60,7 +60,7 @@ function updateTime() {
 
 	}
 
-	greeting.textContent = `${returnGreeting(hours)}、ラモ`;
+	greeting.textContent = `${returnGreeting(hours)}`;
 	clock.innerHTML = time;
 	date.textContent = dateString;
 }
