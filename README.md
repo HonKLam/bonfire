@@ -139,7 +139,7 @@ If the font is not looking right, make sure you installed `JetBrains Mono Nerd F
 
 ## Contributing
 
-Feel free to contribute by sharing this project or creating PRs. In order to develop easily, there is also a simple devShell for nix users:
+Feel free to contribute by sharing this project, reporting issues or creating PRs. In order to develop easily, there is also a simple devShell for nix users:
 
 Just clone the repo and run:
 ```
