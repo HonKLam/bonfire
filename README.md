@@ -121,4 +121,31 @@ When everything is set up and running, you should be able to access the webpage 
 You can now use extensions like [New Tab Override](https://addons.mozilla.org/en-US/firefox/addon/new-tab-override/) and set it with the following settings:
 - Option: Custom URL
 - Manage URL Rules:
-  - URL:
+  - URL: http://127.0.0.1:8420 (or just your correct page)
+- Focus: `Set focus to the web page instead of the address bar` --> CHECK it
+
+--> Opening a new tab should display the new tab, yaaaaay
+
+> [!NOTE]  
+> Already-open tabs check for a new palette every 500ms, so switching your theme takes a moment to show up. Newly opened tabs have the correct colors immediately.
+
+## Troubleshoot
+
+If the font is not looking right, make sure you installed `JetBrains Mono Nerd Font`, or change it in the source code to any font you want to use (currently no quick setting for this)
+
+## Contributing
+
+Feel free to contribute by sharing this project or creating PRs. In order to develop easily, there is also a simple devShell for nix users:
+
+Just clone the repo and run:
+```
+nix develop
+```
+
+It should install [live-server](https://www.npmjs.com/package/live-server) and symlink the colors.css from your nix installation to the repo (if you used the nix install way)
+
+Then in devShell just:
+```
+live-server -p 8421
+```
+And you should easily be able to work on this!
