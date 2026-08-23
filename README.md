@@ -9,9 +9,7 @@
 
 </div>
 
-<div align="center">
-  <img src="assets/demo.mp4" alt="bonfire" width="800">
-</div>
+https://github.com/user-attachments/assets/30284c25-3eae-47a0-944a-e4384f1dc940
 
 > [!WARNING]  
 > This is a private project that I thought would be cool to share. If it doesn't work, feel free to create an issue and I'll see what I can do. But please don't expect me to fix it.
