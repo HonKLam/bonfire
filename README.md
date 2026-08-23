@@ -10,7 +10,7 @@
 </div>
 
 <div align="center">
-  <img src="assets/demo.gif" alt="bonfire" width="800">
+  <img src="assets/demo.mp4" alt="bonfire" width="800">
 </div>
 
 > [!WARNING]  
