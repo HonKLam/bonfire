@@ -36,16 +36,46 @@ This is also the reason we are instead hosting a local server that serves the pa
 
 - Browser with WebGL support
 - JetBrains Mono NerdFont
-- Noctalia
+- Noctalia (the home-manager module needs to be imported, even if you disable the template option)
 
 ### Nix Flake
 
 I created a nix flake that will add a home-manager module to your config.
 
+Add inputs to the `flake.nix` of your nix-config:
+```
+inputs = {
+  bonfire = {
+    url = "github:honklam/bonfire";
+    inputs.nixpkgs.follows = "nixpkgs";
+  };
+};
+```
+
+Also add bonfire in `sharedModules` for Home-Manager access:
+```
+home-manager.sharedModules = [
+	    inputs.bonfire.homeManagerModules.default
+];
+```
+Then add the following to your `home.nix` or create a separate `bonfire.nix` file:
+```
+{ ... }:
+{
+  programs.bonfire.enable = true;
+}
+```
+
 You can configure the following things:
-- set the port for the local webserver (default: 8420)
-- set location where the static webpage files live (default: `$XDG_DATA_HOME/bonfire`)
-- set whether a noctalia user template should be created, aka allow auto loading of noctalia theme colors (default: yes)
+```
+programs.bonfire = {
+  enable = true;
+  port = 8420;                                    # port for the local webserver
+  dataDir = "${config.xdg.dataHome}/bonfire";     # where the static files live
+  noctaliaTemplate = true;                        # auto-load noctalia theme colors
+};
+```
+(the values above are the defaults, so you only need `enable` to get going. With `noctaliaTemplate = false` the page falls back to hardcoded colors)
 
 The module itself will then do the following:
 - sync the static files from the nix store (in case something updated) to the correct location
@@ -73,7 +103,7 @@ The module itself will then do the following:
 }
 ```
 
-- In noctalia config, you need to add the user template, so noctalia knows where the rendered ouptut should go:
+- In noctalia config, you need to add the user template, so noctalia knows where the rendered output should go:
 
 ```
 [theme.templates.user.bonfire]
@@ -82,37 +112,13 @@ output_path = "/path/to/bonfire/colors.css"
 ```
 
 > [!IMPORTANT]  
-> Please make sure the output-file is called `colors.css`)
+> Please make sure the output-file is called `colors.css`
 
 
 ## How to use after install
 
-When everything is set up and running, you should be able to access the webpage through URL (`http://127.0.0.1:8420/`).
+When everything is set up and running, you should be able to access the webpage through URL (`http://127.0.0.1:8420/`, or whatever port you configured).
 You can now use extensions like [New Tab Override](https://addons.mozilla.org/en-US/firefox/addon/new-tab-override/) and set it with the following settings:
 - Option: Custom URL
 - Manage URL Rules:
-  - URL: http://127.0.0.1:8420 (or just your correct page)
-- Focus: `Set focus to the web page instead of the address bar` --> CHECK it
-
---> Opening a new tab should display the new tab, yaaaaay
-
-## Troubleshoot
-
-If the font is not looking right, make sure you installed `JetBrains Mono Nerd Font`, or change it in the source code to any font you want to use (currently no quick setting for this)
-
-## Contributing
-
-Feel free to contribute by sharing this project or creating PRs. In order to develop easily, there is also a simple devShell for nix users:
-
-Just clone the repo and run:
-```
-nix develop
-```
-
-It should install [live-server](https://www.npmjs.com/package/live-server) and symlink the colors.css from your nix installation to the repo (if you used the nix install way)
-
-Then in devShell just:
-```
-live-server -p 8421
-```
-And you should easily be able to work on this!
+  - URL:
