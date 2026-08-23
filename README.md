@@ -133,10 +133,6 @@ You can now use extensions like [New Tab Override](https://addons.mozilla.org/en
 > [!NOTE]  
 > Already-open tabs check for a new palette every 500ms, so switching your theme takes a moment to show up. Newly opened tabs have the correct colors immediately.
 
-## Troubleshoot
-
-If the font is not looking right, make sure you installed `JetBrains Mono Nerd Font`, or change it in the source code to any font you want to use (currently no quick setting for this)
-
 ## Contributing
 
 Feel free to contribute by sharing this project, reporting issues or creating PRs. In order to develop easily, there is also a simple devShell for nix users:
