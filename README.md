@@ -112,7 +112,7 @@ The module itself will then do the following:
 ```
 [theme.templates.user.bonfire]
 input_path  = "~/.config/noctalia/templates/bonfire.css"
-output_path = "/path/to/bonfire/colors.css"
+output_path = "/path/to/bonfire/src/colors.css"
 ```
 
 > [!IMPORTANT]  
@@ -142,10 +142,10 @@ Just clone the repo and run:
 nix develop
 ```
 
-It should install [live-server](https://www.npmjs.com/package/live-server) and symlink the colors.css from your nix installation to the repo (if you used the nix install way)
+It should install [live-server](https://www.npmjs.com/package/live-server) and symlink the colors.css from your nix installation into `src/` (if you used the nix install way)
 
 Then in devShell just:
 ```
-live-server -p 8421
+live-server src -p 8421
 ```
 And you should easily be able to work on this!
