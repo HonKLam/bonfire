@@ -34,6 +34,7 @@
 
           meta = with pkgs.lib; {
             description = "WebGL start page themed from Noctalia";
+            license = licenses.mit;
             platforms = platforms.linux;
           };
         };
