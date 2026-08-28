@@ -1,0 +1,10 @@
+:root {
+  --m-surface:            #061d38;
+  --m-surface-variant:    #082649;
+  --m-on-surface:         #f2f2f3;
+  --m-on-surface-variant: #afb2b6;
+  --m-primary:            #5ca0ef;
+  --m-secondary:          #4c45ed;
+  --m-tertiary:           #9f45ed;
+  --m-outline:            #616870;
+}

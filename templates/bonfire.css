@@ -1,0 +1,10 @@
+:root {
+  --m-surface:            {{colors.surface.default.hex}};
+  --m-surface-variant:    {{colors.surface_variant.default.hex}};
+  --m-on-surface:         {{colors.on_surface.default.hex}};
+  --m-on-surface-variant: {{colors.on_surface_variant.default.hex}};
+  --m-primary:            {{colors.primary.default.hex}};
+  --m-secondary:          {{colors.secondary.default.hex}};
+  --m-tertiary:           {{colors.tertiary.default.hex}};
+  --m-outline:            {{colors.outline.default.hex}};
+}
