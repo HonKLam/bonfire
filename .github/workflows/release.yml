@@ -61,8 +61,12 @@ jobs:
           file darkhttpd
           file darkhttpd | grep -q 'statically linked' \
             || { echo "binary is NOT static" >&2; exit 1; }
-          ldd darkhttpd 2>&1 | grep -q 'not a dynamic executable' \
-            || { echo "binary has dynamic deps" >&2; exit 1; }
+          # A static binary has no PT_INTERP segment. Checking the segment
+          # directly avoids depending on ldd wording, which differs between
+          # glibc versions ("statically linked" vs "not a dynamic executable").
+          if readelf -l darkhttpd | grep -q INTERP; then
+            echo "binary has a dynamic interpreter" >&2; exit 1
+          fi
           ./darkhttpd --help 2>&1 | head -1
 
           # smoke test: actually serve something and fetch it back
