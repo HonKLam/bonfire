@@ -1,0 +1,133 @@
+name: release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      darkhttpd_version:
+        description: 'darkhttpd tag to build (blank = latest)'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # musl gives a genuinely static binary. Building -static against glibc
+      # either fails outright or drags in NSS at runtime, which defeats the
+      # point of shipping one amd64 binary for every distro.
+      - name: Install musl toolchain
+        run: sudo apt-get update && sudo apt-get install -y musl-tools
+
+      # git ls-remote needs no API token and works whether or not upstream
+      # cuts GitHub Releases -- it only ever publishes tags.
+      - name: Resolve darkhttpd version
+        id: dh
+        run: |
+          set -euo pipefail
+          want='${{ github.event.inputs.darkhttpd_version }}'
+          if [ -z "$want" ]; then
+            want=$(git ls-remote --tags --refs https://github.com/emikulic/darkhttpd \
+                   | awk '{print $2}' | sed 's|refs/tags/||' \
+                   | grep -E '^v[0-9]+\.[0-9]+$' | sort -V | tail -1)
+          fi
+          [ -n "$want" ] || { echo "could not resolve a darkhttpd tag" >&2; exit 1; }
+          echo "tag=$want" >> "$GITHUB_OUTPUT"
+          echo "Building darkhttpd $want"
+
+      - name: Fetch and build darkhttpd
+        id: build
+        run: |
+          set -euo pipefail
+          TAG='${{ steps.dh.outputs.tag }}'
+          mkdir -p dist build && cd build
+          curl -fsSL -o src.tar.gz \
+            "https://github.com/emikulic/darkhttpd/archive/refs/tags/$TAG.tar.gz"
+          echo "source-sha256=$(sha256sum src.tar.gz | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+          tar xzf src.tar.gz --strip-components=1
+          make CC=musl-gcc CFLAGS="-O2 -Wall -static"
+          strip darkhttpd
+
+      - name: Verify the binary is static and runs
+        run: |
+          set -euo pipefail
+          cd build
+          file darkhttpd
+          file darkhttpd | grep -q 'statically linked' \
+            || { echo "binary is NOT static" >&2; exit 1; }
+          ldd darkhttpd 2>&1 | grep -q 'not a dynamic executable' \
+            || { echo "binary has dynamic deps" >&2; exit 1; }
+          ./darkhttpd --help 2>&1 | head -1
+
+          # smoke test: actually serve something and fetch it back
+          mkdir -p www && echo ok > www/index.html
+          ./darkhttpd www --addr 127.0.0.1 --port 18422 --no-listing &
+          for i in $(seq 20); do
+            curl -fsS http://127.0.0.1:18422/ >/dev/null 2>&1 && break
+            sleep 0.25
+          done
+          test "$(curl -fsS http://127.0.0.1:18422/)" = ok
+          kill %1
+
+      # Asset names are a contract with install.sh: it fetches
+      # darkhttpd-$ARCH, darkhttpd-LICENSE and SHA256SUMS by exact name, and
+      # greps SHA256SUMS for a bare basename. Do not rename these.
+      - name: Package release assets
+        run: |
+          set -euo pipefail
+          install -m755 build/darkhttpd dist/darkhttpd-x86_64
+          install -m644 build/COPYING   dist/darkhttpd-LICENSE
+          cd dist && sha256sum darkhttpd-x86_64 darkhttpd-LICENSE > SHA256SUMS
+          cat SHA256SUMS
+
+      # Guard the contract above: run the real installer against these exact
+      # assets, with curl and systemctl stubbed out.
+      - name: Verify assets satisfy install.sh
+        run: |
+          set -euo pipefail
+          STUB="$RUNNER_TEMP/stub"; FAKEHOME="$RUNNER_TEMP/home"
+          mkdir -p "$STUB" "$FAKEHOME/.config/noctalia/templates"
+          printf '#!/bin/sh\nexit 0\n' > "$STUB/systemctl"
+          cat > "$STUB/curl" <<EOF
+          #!/bin/sh
+          while [ \$# -gt 0 ]; do
+            case "\$1" in
+              -o) OUT="\$2"; shift 2 ;;
+              -*) shift ;;
+              *)  URL="\$1"; shift ;;
+            esac
+          done
+          cp "$PWD/dist/\$(basename "\$URL")" "\$OUT"
+          EOF
+          chmod +x "$STUB/systemctl" "$STUB/curl"
+          HOME="$FAKEHOME" PATH="$STUB:$PATH" bash ./install.sh
+          test -x "$FAKEHOME/.local/share/bonfire/bin/darkhttpd"
+          test -f "$FAKEHOME/.local/share/bonfire/index.html"
+          test -f "$FAKEHOME/.local/share/bonfire/colors.css"
+          echo "install.sh accepted the release assets"
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          prerelease: false
+          files: |
+            dist/darkhttpd-x86_64
+            dist/darkhttpd-LICENSE
+            dist/SHA256SUMS
+          body: |
+            ## Bundled darkhttpd
+
+            - version: `${{ steps.dh.outputs.tag }}`
+            - source: https://github.com/emikulic/darkhttpd/releases/tag/${{ steps.dh.outputs.tag }}
+            - source tarball sha256: `${{ steps.build.outputs.source-sha256 }}`
+            - built statically against musl for `x86_64`
+            - licensed ISC-style, see `darkhttpd-LICENSE` (upstream `COPYING`)
+
+            Verify downloads with `sha256sum -c SHA256SUMS`.
