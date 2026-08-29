@@ -111,6 +111,13 @@ output_path = "/home/YOU/.local/share/bonfire/colors.css"
 
 Refresh wallpaper and everything should be working!
 
+To uninstall and clean everything up, simply:
+```
+cd bonfire
+cat unisntall.sh
+chmod +x uninstall.sh && ./uninstall.sh
+```
+
 ---
 
 ### Anything else (manual way)
