@@ -40,7 +40,7 @@ This is also the reason we are instead hosting a local server that serves the pa
 
 ---
 
-### Nix Flake
+### NixOS (Nix Flake)
 
 I created a nix flake that will add a home-manager module to your config.
 
@@ -85,6 +85,31 @@ The module itself will then do the following:
 - tell noctalia to use this template
    - noctalia renders the `bonfire.css` template with the correct colors and writes the file next to the static files
 - run a [super basic http server](https://github.com/emikulic/darkhttpd) and point it to the static files as a systemd service
+
+---
+
+### `install.sh` Script
+
+I created a `install.sh` script. Use it to install bonfire (almost automatically):
+
+```
+git clone https://github.com/HonKLam/bonfire.git
+cd bonfire
+cat install.sh
+chmod +x install.sh && ./install.sh
+```
+(`cat install.sh` since you should always look through the script first before running it! ^^)
+
+If install was successful, you need to manually add the noctalia user-template to your
+`noctalia/config.toml` file:
+
+```
+[theme.templates.user.bonfire]
+input_path  = "/home/YOU/.config/noctalia/templates/bonfire.css"
+output_path = "/home/YOU/.local/share/bonfire/colors.css"
+```
+
+Refresh wallpaper and everything should be working!
 
 ---
 
