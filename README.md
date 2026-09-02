@@ -2,7 +2,7 @@
 
 # 🔥⛺ bonfire
 
-**A locally-served new tab page that follows your Noctalia theme**
+**A locally-served new tab page that follows your Noctalia or matugen theme**
 
 ![NixOS](https://img.shields.io/badge/NixOS-5277C3?style=flat&logo=nixos&logoColor=white)
 ![Firefox](https://img.shields.io/badge/Firefox-FF7139?style=flat&logo=firefox&logoColor=white)
@@ -23,6 +23,8 @@ However there isn't really any good solution (as far as I know) that allow a cus
 
 This is also the reason we are instead hosting a local server that serves the page, allowing us to override a new tab with the locally hosted URL.
 
+Since Noctalia uses matugen's template syntax, the same template works for both — so if you generate your colors with plain matugen instead, bonfire follows those just as well.
+
 ## Features
 
 - Clock
@@ -36,7 +38,7 @@ This is also the reason we are instead hosting a local server that serves the pa
 
 - Browser with WebGL support
 - JetBrains Mono NerdFont
-- Noctalia (the home-manager module needs to be imported, even if you disable the template option)
+- Noctalia or [matugen](https://github.com/InioX/matugen) to generate the palette (on NixOS the Noctalia backend registers itself through `programs.noctalia`, which home-manager ships nowadays, so you just need it enabled — bonfire warns instead of failing if the option isn't there)
 
 ---
 
@@ -74,17 +76,44 @@ programs.bonfire = {
   enable = true;
   port = 8420;                                    # port for the local webserver
   dataDir = "${config.xdg.dataHome}/bonfire";     # where the static files live
-  noctaliaTemplate = true;                        # auto-load noctalia theme colors
+  template.backend = "noctalia";                  # "noctalia", "matugen" or "none"
 };
 ```
-(the values above are the defaults, so you only need `enable` to get going. With `noctaliaTemplate = false` the page falls back to hardcoded colors)
+(the values above are the defaults, so you only need `enable` to get going. With `template.backend = "none"` the page falls back to the hardcoded colors from `colors.default.css`)
+
+> [!NOTE]  
+> `noctaliaTemplate` is gone, replaced by `template.backend`. `noctaliaTemplate = true` becomes `template.backend = "noctalia"`, `false` becomes `"none"`.
 
 The module itself will then do the following:
 - sync the static files from the nix store (in case something updated) to the correct location
-- place in `noctalia/templates/` a user-made template called `bonfire.css`
-- tell noctalia to use this template
+- place a user-made template called `bonfire.css` in `noctalia/templates/` or `matugen/templates/`, depending on the backend
+- with the `noctalia` backend: tell noctalia to use this template
    - noctalia renders the `bonfire.css` template with the correct colors and writes the file next to the static files
 - run a [super basic http server](https://github.com/emikulic/darkhttpd) and point it to the static files as a systemd service
+
+#### The matugen backend
+
+With `template.backend = "matugen"` the module only writes the template — registering it is left to you, because bonfire has no business taking over a `config.toml` you already manage. Add this to your `matugen/config.toml`:
+
+```
+[templates.bonfire]
+input_path  = "~/.config/matugen/templates/bonfire.css"
+output_path = "~/.local/share/bonfire/colors.css"
+```
+
+Or, if home-manager owns that file:
+
+```
+xdg.configFile."matugen/config.toml".source =
+  (pkgs.formats.toml { }).generate "matugen-config.toml" {
+    templates.bonfire = {
+      input_path  = "~/.config/matugen/templates/bonfire.css";
+      output_path = "~/.local/share/bonfire/colors.css";
+    };
+  };
+```
+
+The colors then update whenever matugen runs, same as with noctalia. Note that matugen's own home-manager module is deliberately not used here: it renders templates at build time from a wallpaper pinned in your nix config, so the page would only re-theme on `nixos-rebuild switch`.
 
 ---
 
@@ -100,8 +129,15 @@ chmod +x install.sh && ./install.sh
 ```
 (`cat install.sh` since you should always look through the script first before running it! ^^)
 
-If install was successful, you need to manually add the noctalia user-template to your
-`noctalia/config.toml` file:
+The script detects whether you use noctalia or matugen and only asks if it finds both (or neither). You can also say so up front:
+
+```
+./install.sh --backend matugen
+```
+
+If install was successful, you need to manually add the user-template to your config.
+
+For noctalia, in `noctalia/config.toml`:
 
 ```
 [theme.templates.user.bonfire]
@@ -109,7 +145,17 @@ input_path  = "/home/YOU/.config/noctalia/templates/bonfire.css"
 output_path = "/home/YOU/.local/share/bonfire/colors.css"
 ```
 
-Refresh wallpaper and everything should be working!
+Then refresh your wallpaper and everything should be working!
+
+For matugen, in `matugen/config.toml`:
+
+```
+[templates.bonfire]
+input_path  = "/home/YOU/.config/matugen/templates/bonfire.css"
+output_path = "/home/YOU/.local/share/bonfire/colors.css"
+```
+
+Then re-run matugen (`matugen image /path/to/your/wallpaper`) and everything should be working!
 
 To uninstall and clean everything up, simply:
 ```
@@ -124,7 +170,7 @@ chmod +x uninstall.sh && ./uninstall.sh
 
 - clone the repo
 - make a systemd service that will run a http server pointing at the repo
-- create a `bonfire.css` in `noctalia/templates` directory and copy in the following:
+- create a `bonfire.css` in the `noctalia/templates` (or `matugen/templates`) directory and copy in the following — the template is identical for both, only the config block below differs:
 
 ```
 :root {
@@ -139,11 +185,19 @@ chmod +x uninstall.sh && ./uninstall.sh
 }
 ```
 
-- In noctalia config, you need to add the user template, so noctalia knows where the rendered output should go:
+- In your noctalia config, you need to add the user template, so noctalia knows where the rendered output should go:
 
 ```
 [theme.templates.user.bonfire]
 input_path  = "~/.config/noctalia/templates/bonfire.css"
+output_path = "/path/to/bonfire/src/colors.css"
+```
+
+- or, in your matugen config:
+
+```
+[templates.bonfire]
+input_path  = "~/.config/matugen/templates/bonfire.css"
 output_path = "/path/to/bonfire/src/colors.css"
 ```
 
