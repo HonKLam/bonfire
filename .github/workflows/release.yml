@@ -92,11 +92,17 @@ jobs:
 
       # Guard the contract above: run the real installer against these exact
       # assets, with curl and systemctl stubbed out.
+      #
+      # Both runs get stdin from /dev/null: with exactly one backend present the
+      # installer must pick it without asking, so a prompt fails the job here
+      # instead of hanging it.
       - name: Verify assets satisfy install.sh
         run: |
           set -euo pipefail
-          STUB="$RUNNER_TEMP/stub"; FAKEHOME="$RUNNER_TEMP/home"
-          mkdir -p "$STUB" "$FAKEHOME/.config/noctalia/templates"
+          STUB="$RUNNER_TEMP/stub"
+          FAKEHOME="$RUNNER_TEMP/home"; FAKEHOME_MATUGEN="$RUNNER_TEMP/home-matugen"
+          mkdir -p "$STUB" "$FAKEHOME/.config/noctalia/templates" \
+                   "$FAKEHOME_MATUGEN/.config/matugen"
           printf '#!/bin/sh\nexit 0\n' > "$STUB/systemctl"
           cat > "$STUB/curl" <<EOF
           #!/bin/sh
@@ -110,11 +116,19 @@ jobs:
           cp "$PWD/dist/\$(basename "\$URL")" "\$OUT"
           EOF
           chmod +x "$STUB/systemctl" "$STUB/curl"
-          HOME="$FAKEHOME" PATH="$STUB:$PATH" bash ./install.sh
+
+          HOME="$FAKEHOME" PATH="$STUB:$PATH" bash ./install.sh < /dev/null
           test -x "$FAKEHOME/.local/share/bonfire/bin/darkhttpd"
           test -f "$FAKEHOME/.local/share/bonfire/index.html"
           test -f "$FAKEHOME/.local/share/bonfire/colors.css"
-          echo "install.sh accepted the release assets"
+          test -f "$FAKEHOME/.config/noctalia/templates/bonfire.css"
+          echo "install.sh accepted the release assets (noctalia backend)"
+
+          HOME="$FAKEHOME_MATUGEN" PATH="$STUB:$PATH" bash ./install.sh < /dev/null
+          test -x "$FAKEHOME_MATUGEN/.local/share/bonfire/bin/darkhttpd"
+          test -f "$FAKEHOME_MATUGEN/.local/share/bonfire/colors.css"
+          test -f "$FAKEHOME_MATUGEN/.config/matugen/templates/bonfire.css"
+          echo "install.sh accepted the release assets (matugen backend)"
 
       - name: Publish release
         uses: softprops/action-gh-release@v2
