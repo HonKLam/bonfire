@@ -88,10 +88,8 @@ if [[ -d "$BF_DIR" ]]; then
 	echo "removed $BF_DIR"
 fi
 
-# --- Leftovers we refuse to touch ---
+# --- Leftovers we don't touch ---
 
-# Same reasoning as install.sh: the config is yours, so removing the block is
-# your call, not this script's.
 echo
 echo "bonfire uninstalled"
 

@@ -6,8 +6,6 @@ let
   pkg = self.packages.${pkgs.system}.bonfire;
   backend = cfg.template.backend;
 
-  # The same file the install script copies, so the two installation paths can
-  # never render a different palette.
   templateText = builtins.readFile ./templates/bonfire.css;
 in
 {
@@ -34,7 +32,7 @@ in
       description = ''
         Writable directory the page is served from. The static files are
         copied here from the Nix store on every service start, and the theming
-        backend writes colors.css alongside them — which is why this cannot
+        backend writes colors.css alongside them, which is why this cannot
         simply be the store path.
       '';
     };
@@ -61,34 +59,29 @@ in
     ###################################################################
     # Palette template
     ###################################################################
-    (lib.mkIf (backend == "noctalia") {
-      xdg.configFile."noctalia/templates/bonfire.css".text = templateText;
-    })
 
-    (lib.mkIf (backend == "matugen") {
-      xdg.configFile."matugen/templates/bonfire.css".text = templateText;
-    })
+    (lib.mkIf (backend == "noctalia") (lib.mkMerge [
+      { xdg.configFile."noctalia/templates/bonfire.css".text = templateText; }
 
-    # Registering the template with Noctalia is guarded on `options`, not on
-    # `config`: a definition under `programs.noctalia` counts as unmatched (and
-    # so fails evaluation) for anyone who has not imported the Noctalia module,
-    # even when it sits inside a `mkIf false`. `optionalAttrs` drops the whole
-    # attribute path instead, which keeps bonfire usable without Noctalia.
-    (lib.optionalAttrs (options.programs ? noctalia)
-      (lib.mkIf (backend == "noctalia") {
+      # Check if noctalia module is even imported
+      (lib.optionalAttrs (options.programs ? noctalia) {
         programs.noctalia.settings.theme.templates.user.bonfire = {
           input_path  = "${config.xdg.configHome}/noctalia/templates/bonfire.css";
           output_path = "${cfg.dataDir}/colors.css";
         };
-      }))
+      })
+      {
+        warnings = lib.optional (!(options.programs ? noctalia)) ''
+          programs.bonfire: template.backend is "noctalia" but the Noctalia
+          home-manager module is not imported. The template was written to
+          ${config.xdg.configHome}/noctalia/templates/bonfire.css but nothing
+          registered it, so colors.css will never be rendered.
+        '';
+      }
+    ]))
 
-    (lib.mkIf (backend == "noctalia") {
-      warnings = lib.optional (!(options.programs ? noctalia)) ''
-        programs.bonfire: template.backend is "noctalia" but the Noctalia
-        home-manager module is not imported. The template was written to
-        ${config.xdg.configHome}/noctalia/templates/bonfire.css but nothing
-        registered it, so colors.css will never be rendered.
-      '';
+    (lib.mkIf (backend == "matugen") {
+      xdg.configFile."matugen/templates/bonfire.css".text = templateText;
     })
 
     ###################################################################
@@ -105,20 +98,14 @@ in
         };
 
         Service = {
-          # Refresh the static files from the store, but never clobber the
-          # generated colors.css.
           ExecStartPre = pkgs.writeShellScript "bonfire-sync" ''
             mkdir -p ${cfg.dataDir}
-            ${pkgs.rsync}/bin/rsync -a --delete \
-              --exclude colors.css \
-              ${pkg}/ ${cfg.dataDir}/
+
+            ${pkgs.rsync}/bin/rsync -a --delete --exclude colors.css ${pkg}/ ${cfg.dataDir}/
+
             chmod -R u+w ${cfg.dataDir}
 
-            # index.html links colors.css unconditionally and the stylesheet has
-            # no fallback values, so an unrendered palette means an unstyled
-            # page. Seed it until the backend writes a real one.
-            [ -f ${cfg.dataDir}/colors.css ] \
-              || cp ${cfg.dataDir}/colors.default.css ${cfg.dataDir}/colors.css
+            [ -f ${cfg.dataDir}/colors.css ] || cp ${cfg.dataDir}/colors.default.css ${cfg.dataDir}/colors.css
           '';
 
           ExecStart = ''
